@@ -287,29 +287,55 @@ class Board {
 
   // Clear complete rows and animate score
   clearFullRows() {
+    const rowsToClear = [];
+  
+    // Identify all rows that are full
     for (let x = 15; x >= 0; x--) {
       const rowBlocks = this.blocks.filter(b => b.x === x);
       if (rowBlocks.length === 10) {
-        this.removeBlocks(rowBlocks);
-        rowBlocks.forEach(b => b.flash()[0].onfinish = () => {
-          b.destroy();
-          this.fallAbove(x);
-          this.setScore(this.getScore() + 10);
-        });
+        rowsToClear.push({ x, blocks: rowBlocks });
       }
     }
+  
+    if (rowsToClear.length === 0) return;
+  
+    // Sort bottom to top for proper clearing
+    rowsToClear.sort((a, b) => b.x - a.x);
+    const clearedXs = rowsToClear.map(r => r.x);
+  
+    let animationsLeft = rowsToClear.length;
+  
+    rowsToClear.forEach(({ x, blocks }) => {
+      this.removeBlocks(blocks);
+      blocks.forEach(b => {
+        b.flash()[0].onfinish = () => {
+          b.destroy();
+          animationsLeft--;
+  
+          // Once all animations are done, apply falling
+          if (animationsLeft === 0) {
+            this.fallAboveRows(clearedXs);
+          }
+        };
+      });
+  
+      // Add points for each row cleared
+      this.setScore(this.getScore() + 10);
+    });
   }
 
-  // Drop blocks above cleared line
-  fallAbove(row) {
-    for (let i = row - 1; i >= 0; i--) {
-      this.blocks.forEach(b => {
-        if (b.x === i) {
-          b.fall();
-          b.render();
-        }
-      });
-    }
+  fallAboveRows(rows) {
+    // Sort rows in ascending order (bottom-up)
+    rows.sort((a, b) => a - b);
+  
+    this.blocks.forEach(block => {
+      // Count how many cleared rows are below this block
+      const shift = rows.filter(row => block.x < row).length;
+      if (shift > 0) {
+        block.x += shift; // Move block down
+        block.render();   // Re-render it visually
+      }
+    });
   }
 
   // Render moving shape and detect if it can fall

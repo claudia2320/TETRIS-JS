@@ -1,51 +1,72 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>TETRIS JS</title>
-  <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css'><link rel="stylesheet" href="./style.css">
 
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+  <!-- Game styling -->
+  <link rel="stylesheet" href="./style.css">
 </head>
-<body>
-<!-- partial:index.partial.html -->
-<div id='outer-board'>
-<div id='board'>
-<div id='banner'>
-<div>
-<div id='message'></div>
-<div id='new-game'>Tap here to start!</div>
-</div>
-</div>
-</div>
-</div>
-<div id="game-board">
-<!-- Repeat the following div block 160 times -->
-<div class="empty">
-<div class="inner-tile">
-<div class="inner-inner-tile"></div>
-</div>
-</div>
-<!-- ... -->
-</div>
-<div id="stats">
-<div class="labels">Scores</div>
-<div id="score" class="frame">0</div>
-<button class="btn btn-rounded" id="left">
-<i class="fa fas fa-arrow-left"></i>
-</button>
-<button class="btn btn-rounded" id="right">
-<i class="fa fas fa-arrow-right"></i>
-</button>
-<button class="btn btn-rounded" id="rotate">
-<i class="fa fas fa-undo flipx"></i>
-</button>
-<button class="btn btn-rounded" id="down">
-<i class="fa fas fa-arrow-down"></i>
-</button>
-</div>
-<!-- partial -->
-  <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
-<script src='https://cdnjs.cloudflare.com/ajax/libs/animatelo/1.0.3/animatelo.min.js'></script><script  src="./script.js"></script>
 
+<body>
+  <!-- Game area -->
+  <div id="outer-board">
+    <div id="board">
+      <!-- Start/game over message overlay -->
+      <div id="banner">
+        <div>
+          <div id="message"></div>
+          <div id="new-game">Tap here to start!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid of empty tiles (10 columns x 16 rows = 160) -->
+  <div id="game-board">
+    <!-- Generated via JavaScript below -->
+  </div>
+
+  <!-- Game controls and score -->
+  <div id="stats">
+    <div class="labels">Scores</div>
+    <div id="score" class="frame">0</div>
+
+    <button class="btn btn-rounded" id="left" aria-label="Move Left">
+      <i class="fa fa-arrow-left" aria-hidden="true"></i>
+    </button>
+
+    <button class="btn btn-rounded" id="right" aria-label="Move Right">
+      <i class="fa fa-arrow-right" aria-hidden="true"></i>
+    </button>
+
+    <button class="btn btn-rounded" id="rotate" aria-label="Rotate Shape">
+      <i class="fa fa-undo flipx" aria-hidden="true"></i>
+    </button>
+
+    <button class="btn btn-rounded" id="down" aria-label="Drop Shape">
+      <i class="fa fa-arrow-down" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <!-- jQuery and animation library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animatelo/1.0.3/animatelo.min.js"></script>
+
+  <!-- Inject 160 empty tiles dynamically -->
+  <script>
+    for (let i = 0; i < 160; i++) {
+      document.getElementById("game-board").innerHTML +=
+        '<div class="empty"><div class="inner-tile"><div class="inner-inner-tile"></div></div></div>';
+    }
+  </script>
+
+  <!-- Full game logic -->
+  <script src="./script.js"></script>
 </body>
+
 </html>

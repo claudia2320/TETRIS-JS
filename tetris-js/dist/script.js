@@ -1,22 +1,24 @@
-// Define shorthand for jQuery
+// Tetris Game JavaScript - With Rotation Support
+
+// jQuery alias
 var $ = jQuery;
 
-// Class representing a position on the board
+// Class to represent grid positions
 class Position {
   constructor(x, y) {
-    this.x = x;
-    this.y = y;
+    this.x = x; // Row index
+    this.y = y; // Column index
   }
 }
 
-// Class representing a single block in a shape
+// Class to represent a single block in the game
 class Block {
   constructor(x, y, colorClass) {
-    this.x = x; // Vertical position
-    this.y = y; // Horizontal position
-    this.colorClass = colorClass; // Color style class for block
+    this.x = x;
+    this.y = y;
+    this.colorClass = colorClass;
 
-    // Create HTML element for the block
+    // Create the HTML for the block
     let block = document.createElement("div");
     block.className = "block " + this.colorClass;
     block.innerHTML = "<div class='inner-tile'><div class='inner-inner-tile'></div></div>";
@@ -28,7 +30,7 @@ class Block {
     $("#board").append(this.element);
   }
 
-  // Set the visual position of the block based on its coordinates
+  // Update block position visually on screen
   render() {
     $(this.element).css({
       left: this.y * $(this.element).innerWidth() + "px",
@@ -36,50 +38,22 @@ class Block {
     });
   }
 
-  // Move block down by one row
-  fall() {
-    this.x += 1;
-  }
+  // Movement methods
+  fall() { this.x += 1; }
+  moveRight() { this.y += 1; }
+  moveLeft() { this.y -= 1; }
 
-  // Move block right
-  moveRight() {
-    this.y += 1;
-  }
+  // Position helpers
+  rightPosition() { return new Position(this.x, this.y + 1); }
+  leftPosition() { return new Position(this.x, this.y - 1); }
+  getPosition() { return new Position(this.x, this.y); }
 
-  // Move block left
-  moveLeft() {
-    this.y -= 1;
-  }
-
-  // Return position to the right of the current block
-  rightPosition() {
-    return new Position(this.x, this.y + 1);
-  }
-
-  // Return position to the left of the current block
-  leftPosition() {
-    return new Position(this.x, this.y - 1);
-  }
-
-  // Get the current position of the block
-  getPosition() {
-    return new Position(this.x, this.y);
-  }
-
-  // Trigger flash animation using Animate.css
-  flash() {
-    return window.animatelo.flash(this.element, {
-      duration: 500
-    });
-  }
-
-  // Remove block from DOM
-  destroy() {
-    $(this.element).remove();
-  }
+  // Animation and destruction
+  flash() { return window.animatelo.flash(this.element, { duration: 500 }); }
+  destroy() { $(this.element).remove(); }
 }
 
-// Class for handling Tetris shapes (generic)
+// Base class for Tetris shapes
 class Shape {
   constructor(blocks) {
     this.blocks = blocks;
@@ -90,133 +64,342 @@ class Shape {
   }
 
   init() {
-    for (let block of this.blocks) {
-      block.init();
-    }
+    this.blocks.forEach(block => block.init());
   }
 
   render() {
-    for (let block of this.blocks) {
-      block.render();
-    }
+    this.blocks.forEach(block => block.render());
   }
 
-  // Get all positions after falling one unit
-  fallingPositions() {
-    return this.blocks
-      .map(b => b.getPosition())
-      .map(p => new Position(p.x + 1, p.y));
-  }
-
-  // Move all blocks down by one row
   fall() {
-    for (let block of this.blocks) {
-      block.fall();
-    }
+    this.blocks.forEach(block => block.fall());
   }
 
-  // Get positions if moved to the right
+  moveRight() {
+    this.blocks.forEach(block => block.moveRight());
+  }
+
+  moveLeft() {
+    this.blocks.forEach(block => block.moveLeft());
+  }
+
+  clear() {
+    this.blocks.forEach(block => block.destroy());
+    this.blocks = [];
+  }
+
+  addBlocks(blocks) {
+    this.blocks.push(...blocks);
+  }
+
+  fallingPositions() {
+    return this.blocks.map(b => new Position(b.x + 1, b.y));
+  }
+
   rightPositions() {
     return this.blocks.map(b => b.rightPosition());
   }
 
-  // Get positions if moved to the left
   leftPositions() {
     return this.blocks.map(b => b.leftPosition());
   }
 
-  // Move all blocks right
-  moveRight() {
-    for (let block of this.blocks) {
-      block.moveRight();
+  /**
+   * Rotate the shape 90° clockwise using second block as pivot.
+   */
+  rotate() {
+    const pivot = this.blocks[1]; // Use second block as the pivot center
+
+    // Calculate rotated positions for each block
+    const newPositions = this.blocks.map(block => {
+      const dx = block.x - pivot.x;
+      const dy = block.y - pivot.y;
+      return new Position(pivot.x - dy, pivot.y + dx); // Apply rotation matrix
+    });
+
+    // Only rotate if all new positions are within bounds and not occupied
+    if (board.arePositionsValid(newPositions)) {
+      this.blocks.forEach((block, i) => {
+        block.x = newPositions[i].x;
+        block.y = newPositions[i].y;
+      });
+      this.render(); // Re-render the rotated shape
     }
   }
-
-  // Move all blocks left
-  moveLeft() {
-    for (let block of this.blocks) {
-      block.moveLeft();
-    }
-  }
-
-  // Remove all blocks
-  clear() {
-    for (let block of this.blocks) {
-      block.destroy();
-    }
-    this.blocks = [];
-  }
-
-  // Add new blocks to the shape
-  addBlocks(blocks) {
-    for (let block of blocks) {
-      this.blocks.push(block);
-    }
-  }
-
-  // Rotation methods to be overridden by subclasses
-  rotate() {}
-
-  rotatePositions() {}
 }
 
-// Define specific shape subclasses (e.g. Square, LShape, etc.)
-// Each shape has its unique block configuration and rotation logic
+// Shapes: Square (no rotation)
+class Square extends Shape {
+  constructor(x, y) {
+    super([
+      new Block(x, y, 'color-2'),
+      new Block(x, y + 1, 'color-2'),
+      new Block(x + 1, y, 'color-2'),
+      new Block(x + 1, y + 1, 'color-2')
+    ]);
+  }
 
-// (Classes Square, LShape, TShape, ZShape, Line follow here)
-// They override rotate() and rotatePositions() methods appropriately
-// Use block coordinates to define shapes and update them on rotation
+  // Square doesn't rotate visually, so we override rotate
+  rotate() {}
+}
 
-// The rest of the code defines the Board class and game logic
-// Including shape spawning, game loop, rendering, movement, etc.
+// Shapes: Line
+class Line extends Shape {
+  constructor(x, y) {
+    super([
+      new Block(x - 1, y, 'color-1'),
+      new Block(x, y, 'color-1'),
+      new Block(x + 1, y, 'color-1'),
+      new Block(x + 2, y, 'color-1')
+    ]);
+  }
+}
 
-// Keyboard input handling and button events for gameplay controls
+// Shapes: L Shape
+class LShape extends Shape {
+  constructor(x, y) {
+    super([
+      new Block(x - 1, y, 'color-6'),
+      new Block(x, y, 'color-6'),
+      new Block(x + 1, y, 'color-6'),
+      new Block(x + 1, y + 1, 'color-6')
+    ]);
+  }
+}
 
-// Create new Board instance
+// Shapes: T Shape
+class TShape extends Shape {
+  constructor(x, y) {
+    super([
+      new Block(x, y - 1, 'color-3'),
+      new Block(x, y, 'color-3'),
+      new Block(x, y + 1, 'color-3'),
+      new Block(x + 1, y, 'color-3')
+    ]);
+  }
+}
+
+// Shapes: Z Shape
+class ZShape extends Shape {
+  constructor(x, y) {
+    super([
+      new Block(x, y, 'color-5'),
+      new Block(x, y + 1, 'color-5'),
+      new Block(x + 1, y - 1, 'color-5'),
+      new Block(x + 1, y, 'color-5')
+    ]);
+  }
+}
+
+// Board manages the state of the game
+class Board {
+  constructor() {
+    this.blocks = [];      // All static blocks on the board
+    this.shapes = [];      // Active falling shape
+    this.interval = undefined;
+    this.loopInterval = 1000;
+    this.loopIntervalFast = 1000 / 27;
+    this.moveFast = false;
+    this.gameOver = true;
+    this.score = 0;
+    this.init();
+  }
+
+  // Set up initial empty board and UI message
+  init() {
+    $(".empty").each(function(index, ele) {
+      let x = Math.floor(index / 10);
+      let y = index % 10;
+      $(ele).css({
+        left: y * $(ele).innerWidth() + "px",
+        top: x * $(ele).innerHeight() + "px"
+      });
+    });
+    $("#message").text("Tetris");
+    window.animatelo.flash("#new-game", { duration: 2500, iterations: Infinity });
+  }
+
+  // Start new game
+  newGame() {
+    this.shapes.forEach(shape => this.addBlocks(shape.getBlocks()));
+    this.shapes = [];
+    this.blocks.forEach(b => b.destroy());
+    this.blocks = [];
+    this.setScore(0);
+    this.gameOver = false;
+    this.initGameLoop(this.loopInterval);
+    $("#banner").hide();
+  }
+
+  // Set and display score
+  setScore(v) { this.score = v; $("#score").text(this.score); }
+  getScore() { return this.score; }
+
+  // Start the game loop
+  initGameLoop(delay) {
+    if (this.interval) clearInterval(this.interval);
+    this.interval = setInterval(() => this.gameLoop(), delay);
+  }
+
+  // Main game loop
+  gameLoop() {
+    this.renderShapes();
+    this.renderBlocks();
+    this.spawnShapes();
+    this.clearFullRows();
+    this.checkGameOver();
+  }
+
+  // Game over if a block is in top row
+  checkGameOver() {
+    if (this.blocks.some(b => b.getPosition().x === 0 && b.getPosition().y === 4)) {
+      this.gameOver = true;
+      clearInterval(this.interval);
+      this.interval = undefined;
+      $("#banner").show();
+      $("#message").text("Game Over!");
+      $("#new-game").text("Tap here to start again!");
+    }
+  }
+
+  // Spawn a new shape if none is falling
+  spawnShapes() {
+    if (this.shapes.length === 0) {
+      let shape;
+      const rand = this.getRandomRange(0, 4);
+      if (rand === 0) shape = new Square(0, 4);
+      else if (rand === 1) shape = new Line(1, 4);
+      else if (rand === 2) shape = new LShape(1, 4);
+      else if (rand === 3) shape = new TShape(0, 4);
+      else shape = new ZShape(0, 4);
+
+      shape.init();
+      shape.render();
+      this.shapes.push(shape);
+
+      // Reset speed if fast drop was triggered before
+      if (this.moveFast) {
+        this.initGameLoop(this.loopInterval);
+        this.moveFast = false;
+      }
+    }
+  }
+
+  // Clear complete rows and animate score
+  clearFullRows() {
+    for (let x = 15; x >= 0; x--) {
+      const rowBlocks = this.blocks.filter(b => b.x === x);
+      if (rowBlocks.length === 10) {
+        this.removeBlocks(rowBlocks);
+        rowBlocks.forEach(b => b.flash()[0].onfinish = () => {
+          b.destroy();
+          this.fallAbove(x);
+          this.setScore(this.getScore() + 10);
+        });
+      }
+    }
+  }
+
+  // Drop blocks above cleared line
+  fallAbove(row) {
+    for (let i = row - 1; i >= 0; i--) {
+      this.blocks.forEach(b => {
+        if (b.x === i) {
+          b.fall();
+          b.render();
+        }
+      });
+    }
+  }
+
+  // Render moving shape and detect if it can fall
+  renderShapes() {
+    for (let shape of this.getShapes()) {
+      if (this.arePositionsValid(shape.fallingPositions())) {
+        shape.fall();
+        shape.render();
+      } else {
+        this.removeShape(shape);
+        this.addBlocks(shape.getBlocks());
+      }
+    }
+  }
+
+  renderBlocks() {
+    this.blocks.forEach(b => b.render());
+  }
+
+  getShapes() { return Array.from(this.shapes); }
+  getBlock(x, y) { return this.blocks.find(b => b.x === x && b.y === y); }
+  addBlocks(blocks) { this.blocks.push(...blocks); }
+  removeBlocks(blocks) { this.blocks = this.blocks.filter(b => !blocks.includes(b)); }
+  removeShape(shape) { this.shapes = this.shapes.filter(s => s !== shape); }
+
+  arePositionsValid(positions) {
+    return positions.every(pos =>
+      pos.x < 16 && pos.y >= 0 && pos.y < 10 &&
+      !this.getBlock(pos.x, pos.y)
+    );
+  }
+
+  // Left key moves shape left
+  leftKeyPress() {
+    this.shapes.forEach(shape => {
+      if (this.arePositionsValid(shape.leftPositions())) {
+        shape.moveLeft();
+        shape.render();
+      }
+    });
+  }
+
+  // Right key moves shape right
+  rightKeyPress() {
+    this.shapes.forEach(shape => {
+      if (this.arePositionsValid(shape.rightPositions())) {
+        shape.moveRight();
+        shape.render();
+      }
+    });
+  }
+
+  // Down key speeds up the fall
+  downKeyPress() {
+    if (!this.gameOver && !this.moveFast) {
+      this.initGameLoop(this.loopIntervalFast);
+      this.moveFast = true;
+    }
+  }
+
+  // Up key (or rotate button) triggers rotation
+  upKeyPress() {
+    this.shapes.forEach(shape => shape.rotate?.());
+  }
+
+  // Random number generator for spawning shapes
+  getRandomRange(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+}
+
+// Initialize game
 let board = new Board();
 
-// Handle keyboard input for movement and game controls
+// Keyboard controls
 $(document).keydown(function(e) {
   switch (e.which) {
-    case 37: // left arrow
-      board.leftKeyPress();
-      break;
-    case 38: // up arrow
-      board.upKeyPress();
-      break;
-    case 39: // right arrow
-      board.rightKeyPress();
-      break;
-    case 40: // down arrow
-      board.downKeyPress();
-      break;
-    case 78: // 'n' key for new game
-      board.newGame();
-      break;
-    default:
-      console.log(e.which);
-      break;
+    case 37: board.leftKeyPress(); break;     // ←
+    case 38: board.upKeyPress(); break;       // ↑
+    case 39: board.rightKeyPress(); break;    // →
+    case 40: board.downKeyPress(); break;     // ↓
+    case 78: board.newGame(); break;          // N key
+    default: console.log(e.which); break;
   }
-  e.preventDefault();
+  e.preventDefault(); // Prevent default scrolling behavior
 });
 
-// Button click events for UI controls
-$("#new-game").click(function() {
-  board.newGame();
-});
-
-$("#down").click(function() {
-  board.downKeyPress();
-});
-
-$("#rotate").click(function() {
-  board.upKeyPress();
-});
-
-$("#left").click(function() {
-  board.leftKeyPress();
-});
-
-$("#right").click(function() {
-  board.rightKeyPress();
-});
+// Button click controls
+$("#new-game").click(() => board.newGame());
+$("#down").click(() => board.downKeyPress());
+$("#rotate").click(() => board.upKeyPress());
+$("#left").click(() => board.leftKeyPress());
+$("#right").click(() => board.rightKeyPress());
